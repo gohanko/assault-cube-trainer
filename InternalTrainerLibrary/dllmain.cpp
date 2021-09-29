@@ -1,5 +1,6 @@
 // dllmain.cpp : Defines the entry point for the DLL application.
 #include "pch.h"
+#include <iostream>
 #include <Windows.h>
 #include <vector>
 #include <TlHelp32.h>
@@ -18,7 +19,11 @@ void PatchProcessMemoryWithNoOP(BYTE* destination, size_t size) {
     delete[] noOPArray;
 }
 
-uintptr_t HackThread(HMODULE hModule) {
+DWORD WINAPI HackThread(HMODULE hModule) {
+    AllocConsole();
+    FILE* f;
+    freopen_s(&f, "CONOUT$", "w", stdout);
+
     uintptr_t moduleBase = (uintptr_t)GetModuleHandle(L"ac_client.exe");
 
     bool bRecoil = false;
@@ -29,13 +34,17 @@ uintptr_t HackThread(HMODULE hModule) {
 		if (GetAsyncKeyState(VK_NUMPAD1) & 1) {
             bRecoil = !bRecoil;
 
-            if (bRecoil)
+            if (bRecoil) {
                 PatchProcessMemoryWithNoOP((BYTE*)(moduleBase + 0x63786), 10);
-            else
+            } else {
                 PatchProcessMemory((BYTE*)(moduleBase + 0x63786), (BYTE*)"\x50\x8D\x4C\x24\x1C\x51\x8B\xCE\xFF\xD2", 10);
+            }
+
+            std::cout << "No Recoil: " << std::boolalpha << bRecoil << std::endl;
         }
 		if (GetAsyncKeyState(VK_NUMPAD2) & 1) {
             bHealth = !bHealth;
+            std::cout << "Infinite Health: " << std::boolalpha << bHealth << std::endl;
 		}
 		if (GetAsyncKeyState(VK_NUMPAD3) & 1) {
             bAmmo = !bAmmo;
@@ -45,6 +54,7 @@ uintptr_t HackThread(HMODULE hModule) {
             else {
                 PatchProcessMemory((BYTE*)(moduleBase + 0x637e9), (BYTE*)"\xFF\x0E", 2);
             }
+            std::cout << "Infinite Ammo: " << std::boolalpha << bAmmo << std::endl;
 		}
 		if (GetAsyncKeyState(VK_NUMPAD4) & 1) {
 			return 0;
@@ -60,13 +70,16 @@ uintptr_t HackThread(HMODULE hModule) {
         Sleep(500);
     }
 
+    FreeConsole();
     FreeLibraryAndExitThread(hModule, 0);
 }
 
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD  ul_reason_for_call, LPVOID lpReserved ) {
     switch (ul_reason_for_call) {
         case DLL_PROCESS_ATTACH:
+        {
             CloseHandle(CreateThread(nullptr, 0, (LPTHREAD_START_ROUTINE)HackThread, hModule, 0, nullptr));
+        }
         case DLL_THREAD_ATTACH:
         case DLL_THREAD_DETACH:
         case DLL_PROCESS_DETACH:

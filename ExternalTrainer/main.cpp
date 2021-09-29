@@ -15,7 +15,7 @@ DWORD GetProcessID(const wchar_t* processName) {
 			do {
 				if (!_wcsicmp(processEntry.szExeFile, processName)) {
 					processID = (DWORD)processEntry.th32ProcessID;
-				}
+				}	
 			} while (Process32Next(hSnapshot, &processEntry));
 		}
 	}
